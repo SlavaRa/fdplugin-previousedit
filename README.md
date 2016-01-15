@@ -1,4 +1,4 @@
-PrevioUsEdit plugin for FlashDevelop
+PreviousEdit plugin for FlashDevelop
 ========================
 [![Build status](https://ci.appveyor.com/api/projects/status/195iulhhi3rq0mq5?svg=true)](https://ci.appveyor.com/project/slavara/fdplugin-previousedit)
 

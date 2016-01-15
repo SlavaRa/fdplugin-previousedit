@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using ASCompletion.Context;
@@ -22,6 +23,8 @@ namespace PreviousEdit
         Settings settingObject;
         ToolStripMenuItem navigateBackwardMenuItem;
         ToolStripMenuItem navigateForwardMenuItem;
+        ToolStripButton toolBarNavigateBackwardMenuItem;
+        ToolStripButton toolBarNavigateForwardMenuItem;
 
         public int Api => 1;
         public string Name => nameof(PreviousEdit);
@@ -65,22 +68,35 @@ namespace PreviousEdit
 
         void InitMenuItems()
         {
-            var menu = (ToolStripMenuItem)PluginBase.MainForm.FindMenuItem("SearchMenu");
+            var menu = (ToolStripMenuItem) PluginBase.MainForm.FindMenuItem("SearchMenu");
             menu.DropDownItems.Add(new ToolStripSeparator());
-            var image = PluginBase.MainForm.FindImage("99|9|3|-3");
-            navigateBackwardMenuItem = new ToolStripMenuItem("Navigate Backward", image, NavigateBackward);
-            PluginBase.MainForm.RegisterShortcutItem($"{Name}.NavigateBackward", navigateBackwardMenuItem);
-            menu.DropDownItems.Add(navigateBackwardMenuItem);
-            image = PluginBase.MainForm.FindImage("99|9|3|-3");
-            navigateForwardMenuItem = new ToolStripMenuItem("Navigate Forward", image, NavigateForward);
-            PluginBase.MainForm.RegisterShortcutItem($"{Name}.NavigateForward", navigateForwardMenuItem);
-            menu.DropDownItems.Add(navigateForwardMenuItem);
+            var backwards = CreateNavigateButton(menu, "1", "Navigate Backward", NavigateBackward, $"{Name}.NavigateBackward", 0);
+            navigateBackwardMenuItem = backwards.Key;
+            toolBarNavigateBackwardMenuItem = backwards.Value;
+            var forwards = CreateNavigateButton(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
+            navigateForwardMenuItem = forwards.Key;
+            toolBarNavigateForwardMenuItem = forwards.Value;
+        }
+
+        static KeyValuePair<ToolStripMenuItem, ToolStripButton> CreateNavigateButton(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
+        {
+            var image = PluginBase.MainForm.FindImage(imageIndex);
+            var menuItem = new ToolStripMenuItem(text, image, onClick);
+            PluginBase.MainForm.RegisterShortcutItem(shortcutId, menuItem);
+            menu.DropDownItems.Add(menuItem);
+            var toolbarItem = new ToolStripButton(string.Empty, image, onClick) {ToolTipText = text};
+            PluginBase.MainForm.ToolStrip.Items.Insert(toolbarIndex, toolbarItem);
+            return new KeyValuePair<ToolStripMenuItem, ToolStripButton>(menuItem, toolbarItem);
         }
 
         void UpdateMenuItems()
         {
-            navigateBackwardMenuItem.Enabled = backward.Count > 0;
-            navigateForwardMenuItem.Enabled = forward.Count > 0;
+            var enabled = backward.Count > 0;
+            navigateBackwardMenuItem.Enabled = enabled;
+            toolBarNavigateBackwardMenuItem.Enabled = enabled;
+            enabled = forward.Count > 0;
+            navigateForwardMenuItem.Enabled = enabled;
+            toolBarNavigateForwardMenuItem.Enabled = enabled;
         }
 
         void AddEventHandlers() => EventManager.AddEventHandler(this, EventType.FileSwitch);

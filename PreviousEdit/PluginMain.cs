@@ -122,6 +122,8 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
+            //TODO slavara: add lines
+            //TODO slavara: remove lines
             SciControlModified(sci);
         }
 

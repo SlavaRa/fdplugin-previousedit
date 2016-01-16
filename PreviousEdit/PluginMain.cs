@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
-using ASCompletion.Context;
 using PluginCore;
 using PluginCore.Helpers;
 using PluginCore.Managers;
@@ -16,8 +15,8 @@ namespace PreviousEdit
 {
     public class PluginMain : IPlugin
     {
-        readonly Stack<InfoStatus> backward = new Stack<InfoStatus>();
-        readonly Stack<InfoStatus> forward = new Stack<InfoStatus>();
+        readonly List<InfoStatus> backward = new List<InfoStatus>();
+        readonly List<InfoStatus> forward = new List<InfoStatus>();
         InfoStatus currentStatus;
         InfoStatus executableStatus;
         string settingFilename;
@@ -29,8 +28,8 @@ namespace PreviousEdit
         public string Name => nameof(PreviousEdit);
         public string Guid => "55E1998E-9929-4470-805E-2DB339C29116";
         public string Help => "http://www.flashdevelop.org/community/";
-        public string Author => "He Wang";
-        public string Description => "Previous Edit Place.";
+        public string Author => "He Wang, SlavaRa";
+        public string Description => "Navigate Backward and Navigate Forward";
 
         [Browsable(false)]
         public object Settings => settingObject;
@@ -39,6 +38,7 @@ namespace PreviousEdit
         {
             InitBasics();
             LoadSettings();
+            backward.Capacity = ((Settings)Settings).MaxBackward;
             InitMenuItems();
             AddEventHandlers();
         }
@@ -71,6 +71,7 @@ namespace PreviousEdit
             menu.DropDownItems.Add(new ToolStripSeparator());
             backwardMenuItems = createMenuItem(menu, "1", "Navigate Backward", NavigateBackward, $"{Name}.NavigateBackward", 0);
             forwardMenuItems = createMenuItem(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
+            PluginBase.MainForm.ToolStrip.Items.Insert(2, new ToolStripSeparator());
         }
 
         static List<ToolStripItem> createMenuItem(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
@@ -126,7 +127,8 @@ namespace PreviousEdit
 
         void SciControlModified(ScintillaControl sci)
         {
-            var status = new InfoStatus(sci.FileName, sci.CurrentPos);
+            var line = sci.CurrentLine;
+            var status = new InfoStatus(sci.FileName, sci.CurrentPos, line);
             if (currentStatus == null)
             {
                 currentStatus = status;
@@ -138,7 +140,14 @@ namespace PreviousEdit
                 return;
             }
             if (currentStatus.Equals(status)) return;
-            backward.Push(currentStatus);
+            var count = backward.Count;
+            if (count > 0 && backward.Last().CurrentLine == line && currentStatus.CurrentLine == line)
+            {
+                currentStatus = status;
+                return;
+            }
+            if (count == backward.Capacity - 1) backward.RemoveAt(0);
+            backward.Add(currentStatus);
             forward.Clear();
             currentStatus = status;
             UpdateMenuItems();
@@ -146,17 +155,21 @@ namespace PreviousEdit
 
         void NavigateBackward(object sender, EventArgs e)
         {
-            if (backward.Count == 0) return;
-            var item = backward.Pop();
-            forward.Push(currentStatus);
+            var count = backward.Count;
+            if (count == 0) return;
+            var item = backward.Last();
+            backward.Remove(item);
+            forward.Add(currentStatus);
             Navigate(item);
         }
 
         void NavigateForward(object sender, EventArgs e)
         {
-            if (forward.Count == 0) return;
-            var item = forward.Pop();
-            backward.Push(currentStatus);
+            var count = forward.Count;
+            if (count == 0) return;
+            var item = forward.Last();
+            forward.Remove(item);
+            backward.Add(currentStatus);
             Navigate(item);
         }
 
@@ -175,11 +188,13 @@ namespace PreviousEdit
     {
         public string FileName;
         public int Position;
+        public int CurrentLine;
 
-        public InfoStatus(string fileName, int position)
+        public InfoStatus(string fileName, int position, int currentLine)
         {
             FileName = fileName;
             Position = position;
+            CurrentLine = currentLine;
         }
 
         public override bool Equals(object obj)

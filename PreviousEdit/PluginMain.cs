@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using PluginCore;
 using PluginCore.Helpers;
@@ -126,7 +127,8 @@ namespace PreviousEdit
 
         void SciControlModified(ScintillaControl sci)
         {
-            var status = new InfoStatus(sci.FileName, sci.CurrentPos);
+            var line = sci.CurrentLine;
+            var status = new InfoStatus(sci.FileName, sci.CurrentPos, line);
             if (currentStatus == null)
             {
                 currentStatus = status;
@@ -138,7 +140,13 @@ namespace PreviousEdit
                 return;
             }
             if (currentStatus.Equals(status)) return;
-            if (backward.Count == backward.Capacity - 1) backward.RemoveAt(0);
+            var count = backward.Count;
+            if (count > 0 && backward.Last().CurrentLine == line && currentStatus.CurrentLine == line)
+            {
+                currentStatus = status;
+                return;
+            }
+            if (count == backward.Capacity - 1) backward.RemoveAt(0);
             backward.Add(currentStatus);
             forward.Clear();
             currentStatus = status;
@@ -149,7 +157,7 @@ namespace PreviousEdit
         {
             var count = backward.Count;
             if (count == 0) return;
-            var item = backward[count - 1];
+            var item = backward.Last();
             backward.Remove(item);
             forward.Add(currentStatus);
             Navigate(item);
@@ -159,7 +167,7 @@ namespace PreviousEdit
         {
             var count = forward.Count;
             if (count == 0) return;
-            var item = forward[count - 1];
+            var item = forward.Last();
             forward.Remove(item);
             backward.Add(currentStatus);
             Navigate(item);
@@ -180,11 +188,13 @@ namespace PreviousEdit
     {
         public string FileName;
         public int Position;
+        public int CurrentLine;
 
-        public InfoStatus(string fileName, int position)
+        public InfoStatus(string fileName, int position, int currentLine)
         {
             FileName = fileName;
             Position = position;
+            CurrentLine = currentLine;
         }
 
         public override bool Equals(object obj)

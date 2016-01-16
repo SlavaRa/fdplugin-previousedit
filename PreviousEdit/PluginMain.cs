@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using ASCompletion.Context;
@@ -8,6 +9,7 @@ using PluginCore;
 using PluginCore.Helpers;
 using PluginCore.Managers;
 using PluginCore.Utilities;
+using ProjectManager;
 using ScintillaNet;
 
 namespace PreviousEdit
@@ -20,8 +22,8 @@ namespace PreviousEdit
         InfoStatus executableStatus;
         string settingFilename;
         Settings settingObject;
-        ToolStripMenuItem navigateBackwardMenuItem;
-        ToolStripMenuItem navigateForwardMenuItem;
+        List<ToolStripItem> forwardMenuItems;
+        List<ToolStripItem> backwardMenuItems;
 
         public int Api => 1;
         public string Name => nameof(PreviousEdit);
@@ -65,28 +67,40 @@ namespace PreviousEdit
 
         void InitMenuItems()
         {
-            var menu = (ToolStripMenuItem)PluginBase.MainForm.FindMenuItem("SearchMenu");
+            var menu = (ToolStripMenuItem) PluginBase.MainForm.FindMenuItem("SearchMenu");
             menu.DropDownItems.Add(new ToolStripSeparator());
-            var image = PluginBase.MainForm.FindImage("99|9|3|-3");
-            navigateBackwardMenuItem = new ToolStripMenuItem("Navigate Backward", image, NavigateBackward);
-            PluginBase.MainForm.RegisterShortcutItem($"{Name}.NavigateBackward", navigateBackwardMenuItem);
-            menu.DropDownItems.Add(navigateBackwardMenuItem);
-            image = PluginBase.MainForm.FindImage("99|9|3|-3");
-            navigateForwardMenuItem = new ToolStripMenuItem("Navigate Forward", image, NavigateForward);
-            PluginBase.MainForm.RegisterShortcutItem($"{Name}.NavigateForward", navigateForwardMenuItem);
-            menu.DropDownItems.Add(navigateForwardMenuItem);
+            backwardMenuItems = createMenuItem(menu, "1", "Navigate Backward", NavigateBackward, $"{Name}.NavigateBackward", 0);
+            forwardMenuItems = createMenuItem(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
+        }
+
+        static List<ToolStripItem> createMenuItem(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
+        {
+            var image = PluginBase.MainForm.FindImage(imageIndex);
+            var menuItem = new ToolStripMenuItem(text, image, onClick);
+            PluginBase.MainForm.RegisterShortcutItem(shortcutId, menuItem);
+            menu.DropDownItems.Add(menuItem);
+            var toolbarItem = new ToolStripButton(string.Empty, image, onClick) {ToolTipText = text};
+            PluginBase.MainForm.ToolStrip.Items.Insert(toolbarIndex, toolbarItem);
+            return new List<ToolStripItem> {menuItem, toolbarItem};
         }
 
         void UpdateMenuItems()
         {
-            navigateBackwardMenuItem.Enabled = backward.Count > 0;
-            navigateForwardMenuItem.Enabled = forward.Count > 0;
+            backwardMenuItems.ForEach(it => it.Enabled = backward.Count > 0);
+            forwardMenuItems.ForEach(it => it.Enabled = forward.Count > 0);
         }
 
-        void AddEventHandlers() => EventManager.AddEventHandler(this, EventType.FileSwitch);
+        void AddEventHandlers() => EventManager.AddEventHandler(this, EventType.FileSwitch | EventType.Command);
 
         public void HandleEvent(object sender, NotifyEvent e, HandlingPriority priority)
         {
+            if (e.Type == EventType.Command && ((DataEvent) e).Action == ProjectManagerEvents.Project)
+            {
+                backward.Clear();
+                forward.Clear();
+                UpdateMenuItems();
+                return;
+            }
             if (e.Type != EventType.FileSwitch) return;
             var doc = PluginBase.MainForm.CurrentDocument;
             if (!doc.IsEditable) return;

@@ -20,8 +20,12 @@ namespace PreviousEdit.Behavior
         public void Add([NotNull] string fileName, int position, int line)
         {
             var backwardItem = queue.GetBackwardItem();
-            if (backwardItem.FileName == fileName && backwardItem.Line == line) 
+            if (backwardItem.FileName == fileName && backwardItem.Line == line)
+            {
+                CurrentItem.FileName = fileName;
                 CurrentItem.Position = position;
+                CurrentItem.Line = line;
+            }   
             else queue.Add(fileName, position, line);
         }
 

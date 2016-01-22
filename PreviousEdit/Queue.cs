@@ -64,11 +64,12 @@ namespace PreviousEdit
 
         public bool Equals([NotNull] QueueItem to) => Equals(to.FileName, to.Position, to.Line);
 
-        public bool Equals(string fileName, int position, int line)
+        public bool Equals([NotNull] string fileName, int position, int line)
         {
             return fileName == FileName && position == Position && line == Line;
         }
 
+        [NotNull]
         public QueueItem Clone() => new QueueItem {FileName = FileName, Position = Position, Line = Line};
 
         public void Clear()

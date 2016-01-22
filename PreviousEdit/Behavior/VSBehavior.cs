@@ -7,6 +7,8 @@ namespace PreviousEdit.Behavior
         readonly Queue queue = new Queue();
         public bool CanBackward => queue.CanBackward;
         public bool CanForward => queue.CanForward;
+
+        [NotNull]
         public QueueItem CurrentItem => queue.CurrentItem;
 
         public void Clear() => queue.Clear();
@@ -15,7 +17,7 @@ namespace PreviousEdit.Behavior
 
         public void Forward() => queue.Forward();
 
-        public void Add(string fileName, int position, int line)
+        public void Add([NotNull] string fileName, int position, int line)
         {
             var backwardItem = queue.GetBackwardItem();
             if (backwardItem.FileName == fileName && backwardItem.Line == line) 

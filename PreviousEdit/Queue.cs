@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 
@@ -53,6 +54,42 @@ namespace PreviousEdit
 
         [NotNull]
         public QueueItem GetBackwardItem() => CanBackward ? backward.Last() : new QueueItem();
+
+        public void Change([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
+        {
+            if (fileName == CurrentItem.FileName && startPosition <= CurrentItem.Position)
+            {
+                CurrentItem.Position += charsAdded;
+                CurrentItem.Line += linesAdded;
+            }
+            foreach (var it in backward)
+            {
+                if (it.FileName == fileName && it.Position >= startPosition)
+                {
+                    it.Position += charsAdded;
+                    it.Line += linesAdded;
+                }
+            }
+        }
+
+        public void Remove(string fileName, int startPosition, int endPosition, int linesRemoved)
+        {
+            foreach (var it in backward.ToList())
+            {
+                if (it.FileName == fileName)
+                {
+                    if (it.Position >= startPosition && it.Position <= endPosition)
+                    {
+                        backward.Remove(it);
+                    }
+                    else if (it.Position > startPosition && it.Position > endPosition)
+                    {
+                        it.Position -= endPosition - startPosition;
+                        it.Line -= linesRemoved;
+                    }
+                }
+            }
+        }
     }
 
     public class QueueItem

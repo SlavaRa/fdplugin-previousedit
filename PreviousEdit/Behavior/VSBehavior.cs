@@ -31,5 +31,10 @@ namespace PreviousEdit.Behavior
 
         [NotNull]
         public QueueItem GetBackwardItem() => queue.GetBackwardItem();
+
+        public void Change([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
+        {
+            queue.Change(fileName, startPosition, charsAdded, linesAdded);
+        }
     }
 }

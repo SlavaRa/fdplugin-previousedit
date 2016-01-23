@@ -148,5 +148,26 @@ namespace PreviousEdit.Tests.Behavior
             behavior.Add("filename3", 0, 1);
             Assert.IsFalse(behavior.CanForward);
         }
+
+        [TestMethod]
+        public void Change()
+        {
+            var behavior = new VSBehavior();
+            behavior.Add("filename0", 0, 1);
+            behavior.Add("filename1", 1, 1);
+            behavior.Add("filename0", 100, 2);
+            behavior.Add("filename3", 1, 1);
+            behavior.Add("filename0", 1000, 3);
+            behavior.Change("filename0", 150, 1, 1);
+            Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 1001, 4));
+            behavior.Change("filename0", 0, 10, 1);
+            Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 1011, 5));
+            behavior.Backward();
+            behavior.Backward();
+            Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 110, 3));
+            behavior.Backward();
+            behavior.Backward();
+            Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 10, 2));
+        }
     }
 }

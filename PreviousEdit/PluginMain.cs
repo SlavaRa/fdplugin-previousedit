@@ -10,6 +10,7 @@ using PluginCore.Utilities;
 using PreviousEdit.Behavior;
 using ProjectManager;
 using ScintillaNet;
+using ScintillaNet.Enums;
 
 namespace PreviousEdit
 {
@@ -121,6 +122,10 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
+            if ((modificationType & (int)ModificationFlags.DeleteText) > 0)
+            {
+                TraceManager.Add($"{nameof(SciControlModified)}:{nameof(modificationType)}:{modificationType}");
+            }
             //if (linesAdded > 0)
             //{
             //    foreach (var it in backward)

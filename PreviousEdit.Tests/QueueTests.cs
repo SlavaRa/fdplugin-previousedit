@@ -186,5 +186,55 @@ namespace PreviousEdit.Tests
             queue.Add("filename3", 0, 1);
             Assert.IsFalse(queue.CanForward);
         }
+
+        [TestMethod]
+        public void Change()
+        {
+            var queue = new Queue();
+            queue.Add("filename0", 0, 1);
+            queue.Add("filename1", 1, 1);
+            queue.Add("filename0", 100, 2);
+            queue.Add("filename3", 1, 1);
+            queue.Add("filename0", 1000, 3);
+            queue.Change("filename0", 150, 1, 1);
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 1001, 4));
+            queue.Change("filename0", 0, 10, 1);
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 1011, 5));
+            queue.Backward();
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 110, 3));
+            queue.Backward();
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 10, 2));
+        }
+
+        [TestMethod]
+        public void Change_0()
+        {
+            var queue = new Queue();
+            queue.Add("filename0", 0, 1);
+            queue.Add("filename0", 100, 2);
+            queue.Add("filename0", 1000, 3);
+            queue.Change("filename0", 0, -1, -1);
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 999, 2));
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 99, 1));
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 0, 0));
+        }
+
+        [TestMethod]
+        public void Remove()
+        {
+            var queue = new Queue();
+            queue.Add("filename0", 0, 1);
+            queue.Add("filename0", 100, 2);
+            queue.Add("filename0", 150, 3);
+            queue.Add("filename0", 1000, 4);
+            queue.Remove("filename0", 50, 200, 2);
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 1000, 2));
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 0, 1));
+        }
     }
 }

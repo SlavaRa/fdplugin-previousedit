@@ -1,13 +1,21 @@
-﻿using JetBrains.Annotations;
+﻿using System;
+using System.Windows.Forms;
+using JetBrains.Annotations;
 
 namespace PreviousEdit.Behavior
 {
     public class VSBehavior
     {
+        public event EventHandler Change
+        {
+            add { queue.Change += value; }
+            remove { queue.Change -= value; }
+        }
+
         readonly Queue queue = new Queue();
         public bool CanBackward => queue.CanBackward;
         public bool CanForward => queue.CanForward;
-
+        
         [NotNull]
         public QueueItem CurrentItem => queue.CurrentItem;
 
@@ -17,28 +25,16 @@ namespace PreviousEdit.Behavior
 
         public void Forward() => queue.Forward();
 
-        public void Add([NotNull] string fileName, int position, int line)
-        {
-            var backwardItem = queue.GetBackwardItem();
-            if (backwardItem.FileName == fileName && backwardItem.Line == line)
-            {
-                CurrentItem.FileName = fileName;
-                CurrentItem.Position = position;
-                CurrentItem.Line = line;
-            }   
-            else queue.Add(fileName, position, line);
-        }
+        public void Add([NotNull] string fileName, int position, int line) => queue.Add(fileName, position, line);
 
         [NotNull]
         public QueueItem GetBackwardItem() => queue.GetBackwardItem();
 
-        public void Change([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
+        public void Update([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
         {
-            queue.Change(fileName, startPosition, charsAdded, linesAdded);
+            queue.Update(fileName, startPosition, charsAdded, linesAdded);
         }
 
-#if DEBUG
-        public override string ToString() => queue.ToString();
-#endif
+        public ToolStripItem[] GetProvider() => queue.GetProvider();
     }
 }

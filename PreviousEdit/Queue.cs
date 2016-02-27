@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Windows.Forms;
 using JetBrains.Annotations;
-using PluginCore.Managers;
+using PluginCore;
 
 namespace PreviousEdit
 {
     public class Queue
     {
+        [CanBeNull]
+        public event EventHandler Change;
+
         readonly List<QueueItem> backward = new List<QueueItem>();
         readonly List<QueueItem> forward = new List<QueueItem>();
         public int Count => backward.Count;
@@ -19,14 +23,19 @@ namespace PreviousEdit
         public bool CanBackward => backward.Count > 0;
         public bool CanForward => forward.Count > 0;
 
-        public void Add([NotNull] string filename, int position, int line)
+        public void Add([NotNull] string fileName, int position, int line)
         {
-            if (CurrentItem.Equals(filename, position, line)) return;
+            if (CurrentItem.Equals(fileName, position, line)) return;
             forward.Clear();
-            if (!CurrentItem.IsEmpty) backward.Add(CurrentItem.Clone());
-            CurrentItem.FileName = filename;
-            CurrentItem.Position = position;
-            CurrentItem.Line = line;
+            var count = backward.Count;
+            if (count > 0 && backward.Last().Equals(CurrentItem)) backward.RemoveAt(count - 1);
+            else
+            {
+                if (!CurrentItem.IsEmpty) backward.Add(CurrentItem.Clone());
+                CurrentItem.FileName = fileName;
+                CurrentItem.Position = position;
+                CurrentItem.Line = line;
+            }
         }
 
         public void Clear()
@@ -34,6 +43,7 @@ namespace PreviousEdit
             backward.Clear();
             forward.Clear();
             CurrentItem.Clear();
+            Change?.Invoke(this, EventArgs.Empty);
         }
 
         public void Backward()
@@ -43,6 +53,7 @@ namespace PreviousEdit
             if (!CurrentItem.IsEmpty) forward.Add(CurrentItem.Clone());
             last.CopyTo(CurrentItem);
             backward.Remove(last);
+            Change?.Invoke(this, EventArgs.Empty);
         }
 
         public void Forward()
@@ -52,12 +63,35 @@ namespace PreviousEdit
             if (!CurrentItem.IsEmpty) backward.Add(CurrentItem.Clone());
             last.CopyTo(CurrentItem);
             forward.Remove(last);
+            Change?.Invoke(this, EventArgs.Empty);
         }
 
         [NotNull]
         public QueueItem GetBackwardItem() => CanBackward ? backward.Last() : new QueueItem();
 
-        public void Change([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
+        [NotNull]
+        public ToolStripItem[] GetProvider()
+        {
+            var items = new List<QueueItem>(backward);
+            items.Add(CurrentItem);
+            var result = new List<ToolStripItem>();
+            for (var i = items.Count - 1; i >= 0; i--)
+            {
+                var it = items[i];
+                var text = $"{Path.GetFileName(it.FileName)}: Line:{it.Line} Position:{it.Position}";
+                var button = new ToolStripButton
+                {
+                    Text = text,
+                    Width = 340,
+                    DisplayStyle = ToolStripItemDisplayStyle.Text
+                };
+                result.Add(button);
+            }
+            result[0].Image = PluginBase.MainForm.FindImage("461");
+            return result.ToArray();
+        }
+
+        public void Update([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
         {
             forward.Clear();
             if (fileName == CurrentItem.FileName) backward.Add(CurrentItem);
@@ -84,11 +118,8 @@ namespace PreviousEdit
             }
             if (backward.Contains(CurrentItem)) backward.Remove(CurrentItem);
             else Backward();
+            Change?.Invoke(this, EventArgs.Empty);
         }
-
-#if DEBUG
-        public override string ToString() => backward.Aggregate("", (current, it) => current + $"Fatal:file:{it.FileName}->{it.Line}:{it.Position}\n");
-#endif
     }
 
     public class QueueItem
@@ -136,5 +167,7 @@ namespace PreviousEdit
             to.Position = Position;
             to.Line = Line;
         }
+
+        public override string ToString() => $"{nameof(FileName)}:{FileName}, {nameof(Line)}:{Line}, {nameof(Position)}:{Position}";
     }
 }

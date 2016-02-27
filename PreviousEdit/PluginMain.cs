@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using JetBrains.Annotations;
@@ -12,6 +13,7 @@ using PreviousEdit.Behavior;
 using ProjectManager;
 using ScintillaNet;
 using ScintillaNet.Enums;
+using WeifenLuo.WinFormsUI.Docking;
 
 namespace PreviousEdit
 {
@@ -79,18 +81,20 @@ namespace PreviousEdit
         {
             var menu = (ToolStripMenuItem) PluginBase.MainForm.FindMenuItem("SearchMenu");
             menu.DropDownItems.Add(new ToolStripSeparator());
-            backwardMenuItems = createMenuItem(menu, "1", "Navigate Backward", NavigateBackward, $"{Name}.NavigateBackward", 0);
-            forwardMenuItems = createMenuItem(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
+            backwardMenuItems = CreateMenuItem(menu, "1", "Navigate Backward", OnBackwardClick, $"{Name}.NavigateBackward", 0);
+            forwardMenuItems = CreateMenuItem(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
             PluginBase.MainForm.ToolStrip.Items.Insert(2, new ToolStripSeparator());
         }
 
-        static List<ToolStripItem> createMenuItem(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
+        static List<ToolStripItem> CreateMenuItem(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
         {
             var image = PluginBase.MainForm.FindImage(imageIndex);
             var menuItem = new ToolStripMenuItem(text, image, onClick);
             PluginBase.MainForm.RegisterShortcutItem(shortcutId, menuItem);
             menu.DropDownItems.Add(menuItem);
-            var toolbarItem = new ToolStripButton(string.Empty, image, onClick) {ToolTipText = text};
+            ToolStripItem toolbarItem;
+            if (toolbarIndex == 0) toolbarItem = new ToolStripSplitButton(string.Empty, image, onClick) { ToolTipText = text};
+            else toolbarItem = new ToolStripButton(string.Empty, image, onClick) {ToolTipText = text};
             PluginBase.MainForm.ToolStrip.Items.Insert(toolbarIndex, toolbarItem);
             return new List<ToolStripItem> {menuItem, toolbarItem};
         }
@@ -102,9 +106,20 @@ namespace PreviousEdit
         {
             backwardMenuItems.ForEach(it => it.Enabled = behavior.CanBackward);
             forwardMenuItems.ForEach(it => it.Enabled = behavior.CanForward);
+            var button = (ToolStripSplitButton)backwardMenuItems[1];
+            button.DropDownItems.Clear();
+            button.DropDownItems.AddRange(behavior.GetProvider());
+            button.TextImageRelation = TextImageRelation.TextBeforeImage;
+            button.Overflow = ToolStripItemOverflow.Never;
+            button.DropDown.AutoClose = false;
+            button.DropDown.Show();
         }
 
-        void AddEventHandlers() => EventManager.AddEventHandler(this, EventType.FileSwitch | EventType.Command);
+        void AddEventHandlers()
+        {
+            EventManager.AddEventHandler(this, EventType.FileSwitch | EventType.Command);
+            behavior.Change += BehaviorOnChange;
+        }
 
         /// <summary>
         /// Handles the incoming events
@@ -141,22 +156,12 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
+            if (modificationType != (int) ModificationFlags.DeleteText &&
+                modificationType != (int) ModificationFlags.InsertText) return;
             var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
             if (linesAdded < 0) length = -length;
-#if DEBUG
-            TraceManager.Add(nameof(SciControlModified));
-            TraceManager.Add(behavior.ToString());
-            TraceManager.Add(sci.FileName);
-            TraceManager.Add("startPosition: " + startPosition);
-            TraceManager.Add("length: " + length);
-            TraceManager.Add("linesAdded: " + linesAdded);
-#endif
-            behavior.Change(sci.FileName, startPosition, length, linesAdded);
+            behavior.Update(sci.FileName, startPosition, length, linesAdded);
             sciPrevPosition = sci.CurrentPos;
-#if DEBUG
-            TraceManager.Add(nameof(SciControlModified));
-            TraceManager.Add(behavior.ToString());
-#endif
         }
 
         void SciControlUpdateUI(ScintillaControl sci)
@@ -166,19 +171,22 @@ namespace PreviousEdit
             UpdateMenuItems();
         }
 
+        void OnBackwardClick(object sender, EventArgs e)
+        {
+            if (((ToolStripSplitButton) sender).ButtonPressed) NavigateBackward(sender, e);
+        }
+
         void NavigateBackward(object sender, EventArgs e)
         {
-            if (!behavior.CanBackward) return;
-            behavior.Backward();
-            Navigate(behavior.CurrentItem);
+            if (behavior.CanBackward) behavior.Backward();
         }
 
         void NavigateForward(object sender, EventArgs e)
         {
-            if (!behavior.CanForward) return;
-            behavior.Forward();
-            Navigate(behavior.CurrentItem);
+            if (behavior.CanForward) behavior.Forward();
         }
+
+        void BehaviorOnChange(object sender, EventArgs e) => Navigate(behavior.CurrentItem);
 
         void Navigate(QueueItem to)
         {

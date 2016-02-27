@@ -17,23 +17,7 @@ namespace PreviousEdit.Tests.Behavior
             behavior.Add("filename", 110, 1);
             Assert.IsTrue(behavior.CurrentItem.Equals("filename", 110, 1));
         }
-
-        [TestMethod]
-        public void Add_0()
-        {
-            var behavior = new VSBehavior();
-            behavior.Add("filename", 100, 1);
-            Assert.IsTrue(behavior.CurrentItem.Equals("filename", 100, 1));
-            Assert.IsFalse(behavior.CanBackward);
-            behavior.Add("filename", 150, 1);
-            Assert.IsTrue(behavior.CurrentItem.Equals("filename", 150, 1));
-            Assert.IsTrue(behavior.CanBackward);
-            Assert.IsTrue(behavior.GetBackwardItem().Equals("filename", 100, 1));
-            behavior.Add("filename", 120, 1);
-            Assert.IsTrue(behavior.CurrentItem.Equals("filename", 120, 1));
-            Assert.IsTrue(behavior.GetBackwardItem().Equals("filename", 100, 1));
-        }
-
+        
         [TestMethod]
         public void Clear()
         {
@@ -158,9 +142,9 @@ namespace PreviousEdit.Tests.Behavior
             behavior.Add("filename0", 100, 2);
             behavior.Add("filename3", 1, 1);
             behavior.Add("filename0", 1000, 3);
-            behavior.Change("filename0", 150, 1, 1);
+            behavior.Update("filename0", 150, 1, 1);
             Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 1001, 4));
-            behavior.Change("filename0", 0, 10, 1);
+            behavior.Update("filename0", 0, 10, 1);
             Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 1011, 5));
             behavior.Backward();
             behavior.Backward();

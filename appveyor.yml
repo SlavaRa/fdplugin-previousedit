@@ -18,7 +18,7 @@ init:
 matrix:
   fast_finish: true
 build: off
-before_script:
+build_script:
 - cd c:\
 - mv %APPVEYOR_BUILD_FOLDER% %PLUGIN_PATH%
 - nuget restore %PLUGIN_PATH%\%PLUGIN_NAME%.sln

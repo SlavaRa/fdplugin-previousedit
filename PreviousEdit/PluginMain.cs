@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using JetBrains.Annotations;
@@ -91,7 +92,13 @@ namespace PreviousEdit
             PluginBase.MainForm.RegisterShortcutItem(shortcutId, menuItem);
             menu.DropDownItems.Add(menuItem);
             ToolStripItem toolbarItem;
-            if (toolbarIndex == 0) toolbarItem = new ToolStripSplitButton(string.Empty, image, onClick) { ToolTipText = text};
+            if (toolbarIndex == 0)
+            {
+                toolbarItem = new ToolStripSplitButton(string.Empty, image, onClick) { ToolTipText = text};
+                var imageList = new ImageList();
+                imageList.Images.Add("current", PluginBase.MainForm.FindImage("461"));
+                ((ToolStripSplitButton) toolbarItem).DropDown.ImageList = imageList;
+            }
             else toolbarItem = new ToolStripButton(string.Empty, image, onClick) {ToolTipText = text};
             PluginBase.MainForm.ToolStrip.Items.Insert(toolbarIndex, toolbarItem);
             return new List<ToolStripItem> {menuItem, toolbarItem};
@@ -105,8 +112,11 @@ namespace PreviousEdit
             backwardMenuItems.ForEach(it => it.Enabled = behavior.CanBackward);
             forwardMenuItems.ForEach(it => it.Enabled = behavior.CanForward);
             var button = (ToolStripSplitButton)backwardMenuItems[1];
+            button.DropDown.MaximumSize = new Size(340, 600);
             button.DropDownItems.Clear();
             button.DropDownItems.AddRange(behavior.GetProvider());
+            button.DropDown.AutoClose = false;
+            button.DropDown.Show();
         }
 
         void AddEventHandlers()
@@ -160,9 +170,11 @@ namespace PreviousEdit
 
         void SciControlUpdateUI([NotNull] ScintillaControl sci)
         {
+            if (sci.CurrentPos == sciPrevPosition) return;
             if (executableStatus != null && executableStatus.Equals(behavior.CurrentItem)) return;
             behavior.Add(sci.FileName, sci.CurrentPos, sci.CurrentLine);
             UpdateMenuItems();
+            sciPrevPosition = sci.CurrentPos;
         }
 
         void OnBackwardClick(object sender, EventArgs e)

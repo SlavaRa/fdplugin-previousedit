@@ -79,7 +79,7 @@ namespace PreviousEdit
             {
                 var it = items[i];
                 var text = $"{Path.GetFileName(it.FileName)}: Line:{it.Line} Position:{it.Position}";
-                var button = new ToolStripButton
+                var button = new ToolStripMenuItem
                 {
                     Text = text,
                     Width = 340,
@@ -124,12 +124,14 @@ namespace PreviousEdit
 
         void OnBackwardMenuClick(object sender, EventArgs args)
         {
-            var button = (ToolStripButton)sender;
-            var item = (QueueItem)button.Tag;
-            var index = backward.IndexOf(item);
-            var count = backward.Count - 1 - index;
-            List<QueueItem> items = backward.GetRange(index, count);
+            var item = (QueueItem) ((ToolStripMenuItem) sender).Tag;
+            TraceManager.Add("1:" + backward.Contains(item));
+            var index = backward.IndexOf(item) + 1;
+            var count = backward.Count - index;
+            var items = backward.GetRange(index, count);
             backward.RemoveRange(index, count);
+            TraceManager.Add("2:" + backward.Contains(item));
+            TraceManager.Add("3:" + backward.Last().Equals(item));
             forward.AddRange(items);
             CurrentItem.Clear();
             Backward();

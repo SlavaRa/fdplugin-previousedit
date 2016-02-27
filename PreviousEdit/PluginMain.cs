@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Forms;
+using JetBrains.Annotations;
 using PluginCore;
 using PluginCore.Helpers;
 using PluginCore.Managers;
@@ -16,14 +17,9 @@ namespace PreviousEdit
 {
     public class PluginMain : IPlugin
     {
-        readonly VSBehavior behavior = new VSBehavior();
-        QueueItem executableStatus;
-        string settingFilename;
-        Settings settingObject;
-        List<ToolStripItem> forwardMenuItems;
-        List<ToolStripItem> backwardMenuItems;
-
         public int Api => 1;
+
+        [NotNull]
         public string Name => nameof(PreviousEdit);
         public string Guid => "55E1998E-9929-4470-805E-2DB339C29116";
         public string Help => "http://www.flashdevelop.org/community/";
@@ -32,15 +28,28 @@ namespace PreviousEdit
 
         [Browsable(false)]
         public object Settings => settingObject;
+        string settingFilename;
+        Settings settingObject;
+        readonly VSBehavior behavior = new VSBehavior();
+        QueueItem executableStatus;
+        List<ToolStripItem> forwardMenuItems;
+        List<ToolStripItem> backwardMenuItems;
+        int sciPrevPosition = -1;
 
+        /// <summary>
+        /// Initializes the plugin
+        /// </summary>
         public void Initialize()
         {
             InitBasics();
             LoadSettings();
-            InitMenuItems();
+            CreateMenuItems();
             AddEventHandlers();
         }
 
+        /// <summary>
+        /// Disposes the plugin
+        /// </summary>
         public void Dispose() => SaveSettings();
 
         /// <summary>
@@ -63,7 +72,10 @@ namespace PreviousEdit
             else settingObject = (Settings)ObjectSerializer.Deserialize(settingFilename, settingObject);
         }
 
-        void InitMenuItems()
+        /// <summary>
+        /// Creates the required menu items
+        /// </summary>
+        void CreateMenuItems()
         {
             var menu = (ToolStripMenuItem) PluginBase.MainForm.FindMenuItem("SearchMenu");
             menu.DropDownItems.Add(new ToolStripSeparator());
@@ -83,6 +95,9 @@ namespace PreviousEdit
             return new List<ToolStripItem> {menuItem, toolbarItem};
         }
 
+        /// <summary>
+        /// Updates the state of the menu items
+        /// </summary>
         void UpdateMenuItems()
         {
             backwardMenuItems.ForEach(it => it.Enabled = behavior.CanBackward);
@@ -91,11 +106,15 @@ namespace PreviousEdit
 
         void AddEventHandlers() => EventManager.AddEventHandler(this, EventType.FileSwitch | EventType.Command);
 
+        /// <summary>
+        /// Handles the incoming events
+        /// </summary>
         public void HandleEvent(object sender, NotifyEvent e, HandlingPriority priority)
         {
             if (e.Type == EventType.Command && ((DataEvent) e).Action == ProjectManagerEvents.Project)
             {
                 behavior.Clear();
+                sciPrevPosition = -1;
                 executableStatus = null;
                 UpdateMenuItems();
                 return;
@@ -122,26 +141,15 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
-            if ((modificationType & (int)ModificationFlags.DeleteText) > 0)
+            if (linesAdded < 0)
             {
-                TraceManager.Add($"{nameof(SciControlModified)}:{nameof(modificationType)}:{modificationType}");
+                if (sciPrevPosition != -1)
+                {
+                    var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
+                    behavior.RemoveLines(sci.FileName, startPosition, length, Math.Abs(linesAdded));
+                }
             }
-            //if (linesAdded > 0)
-            //{
-            //    foreach (var it in backward)
-            //    {
-            //        var startLine = sci.CurrentLine - linesAdded;
-            //        if (it.Line < startLine) continue;
-            //        it.Line += linesAdded;
-            //        for (int i = startLine; i < linesAdded; i++)
-            //        {
-            //            it.Position += sci.LineLength(i);
-            //        }
-            //    }
-            //    backward.ForEach(it => TraceManager.Add($"{it.Line}:{it.Position}"));
-            //    currentStatus = GetStatus(sci);
-            //}
-            //TODO slavara: remove lines
+            sciPrevPosition = sci.CurrentPos;
         }
 
         void SciControlUpdateUI(ScintillaControl sci)

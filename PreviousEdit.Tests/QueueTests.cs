@@ -224,17 +224,19 @@ namespace PreviousEdit.Tests
         }
 
         [TestMethod]
-        public void Remove()
+        public void RemoveLines()
         {
             var queue = new Queue();
             queue.Add("filename0", 0, 1);
-            queue.Add("filename0", 100, 2);
-            queue.Add("filename0", 150, 3);
-            queue.Add("filename0", 1000, 4);
-            queue.Remove("filename0", 50, 200, 2);
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 1000, 2));
+            queue.Add("filename0", 10, 2);
+            queue.Add("filename0", 20, 3);
+            queue.Add("filename0", 30, 4);
+            queue.Add("filename0", 40, 5);
+            queue.RemoveLines("filename0", 20, 10, 1);
+            Assert.AreEqual(4, queue.CurrentItem.Line);
+            queue.RemoveLines("filename0", 0, 10, 1);
             queue.Backward();
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 0, 1));
+            Assert.AreEqual(2, queue.CurrentItem.Line);
         }
     }
 }

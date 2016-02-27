@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using JetBrains.Annotations;
+using PluginCore.Managers;
 
 namespace PreviousEdit
 {
@@ -63,29 +65,28 @@ namespace PreviousEdit
             }
             foreach (var it in backward)
             {
-                if (it.FileName == fileName && it.Position >= startPosition)
-                {
-                    it.Position += charsAdded;
-                    it.Line += linesAdded;
-                }
+                if (it.FileName != fileName || it.Position < startPosition) continue;
+                it.Position += charsAdded;
+                it.Line += linesAdded;
             }
         }
 
-        public void Remove(string fileName, int startPosition, int endPosition, int linesRemoved)
+        public void RemoveLines([NotNull] string fileName, int startPosition, int length, int linesRemoved)
         {
-            foreach (var it in backward.ToList())
+            var list = new List<QueueItem>(backward);
+            list.Add(CurrentItem);
+            var endPosition = startPosition + length;
+            foreach (var it in list)
             {
-                if (it.FileName == fileName)
+                if (it.FileName != fileName || it.Position < startPosition) continue;
+                if (it.Position < endPosition)
                 {
-                    if (it.Position >= startPosition && it.Position <= endPosition)
-                    {
-                        backward.Remove(it);
-                    }
-                    else if (it.Position > startPosition && it.Position > endPosition)
-                    {
-                        it.Position -= endPosition - startPosition;
-                        it.Line -= linesRemoved;
-                    }
+                    if(backward.Contains(it)) backward.Remove(it);
+                }
+                else
+                {
+                    it.Position -= length;
+                    it.Line -= linesRemoved;
                 }
             }
         }

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using JetBrains.Annotations;
-using PluginCore;
+using PluginCore.Managers;
 
 namespace PreviousEdit
 {
@@ -83,11 +83,12 @@ namespace PreviousEdit
                 {
                     Text = text,
                     Width = 340,
-                    DisplayStyle = ToolStripItemDisplayStyle.Text
+                    Tag = it,
                 };
+                if (button.Tag != CurrentItem) button.Click += OnBackwardMenuClick;
+                else button.ImageKey = "current";
                 result.Add(button);
             }
-            result[0].Image = PluginBase.MainForm.FindImage("461");
             return result.ToArray();
         }
 
@@ -119,6 +120,27 @@ namespace PreviousEdit
             if (backward.Contains(CurrentItem)) backward.Remove(CurrentItem);
             else Backward();
             Change?.Invoke(this, EventArgs.Empty);
+        }
+
+        void OnBackwardMenuClick(object sender, EventArgs args)
+        {
+            try
+            {
+                var button = (ToolStripButton)sender;
+                var item = (QueueItem)button.Tag;
+                var index = backward.IndexOf(item);
+                var count = backward.Count - 1 - index;
+                List<QueueItem> items = backward.GetRange(index, count);
+                backward.RemoveRange(index, count);
+                forward.AddRange(items);
+                CurrentItem.Clear();
+                Backward();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                ErrorManager.ShowError(e);
+            }
         }
     }
 

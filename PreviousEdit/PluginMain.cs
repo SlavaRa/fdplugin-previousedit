@@ -34,7 +34,7 @@ namespace PreviousEdit
         QueueItem executableStatus;
         List<ToolStripItem> forwardMenuItems;
         List<ToolStripItem> backwardMenuItems;
-        int sciPrevPosition = -1;
+        int sciPrevPosition;
 
         /// <summary>
         /// Initializes the plugin
@@ -114,7 +114,7 @@ namespace PreviousEdit
             if (e.Type == EventType.Command && ((DataEvent) e).Action == ProjectManagerEvents.Project)
             {
                 behavior.Clear();
-                sciPrevPosition = -1;
+                sciPrevPosition = 0;
                 executableStatus = null;
                 UpdateMenuItems();
                 return;
@@ -141,10 +141,22 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
-            //var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
-            //if (linesAdded < 0) length = -length;
-            //behavior.Change(sci.FileName, startPosition, length, linesAdded);
-            //sciPrevPosition = sci.CurrentPos;
+            var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
+            if (linesAdded < 0) length = -length;
+#if DEBUG
+            TraceManager.Add(nameof(SciControlModified));
+            TraceManager.Add(behavior.ToString());
+            TraceManager.Add(sci.FileName);
+            TraceManager.Add("startPosition: " + startPosition);
+            TraceManager.Add("length: " + length);
+            TraceManager.Add("linesAdded: " + linesAdded);
+#endif
+            behavior.Change(sci.FileName, startPosition, length, linesAdded);
+            sciPrevPosition = sci.CurrentPos;
+#if DEBUG
+            TraceManager.Add(nameof(SciControlModified));
+            TraceManager.Add(behavior.ToString());
+#endif
         }
 
         void SciControlUpdateUI(ScintillaControl sci)

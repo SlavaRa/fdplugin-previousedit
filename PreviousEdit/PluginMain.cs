@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using JetBrains.Annotations;
@@ -13,7 +12,6 @@ using PreviousEdit.Behavior;
 using ProjectManager;
 using ScintillaNet;
 using ScintillaNet.Enums;
-using WeifenLuo.WinFormsUI.Docking;
 
 namespace PreviousEdit
 {
@@ -109,10 +107,6 @@ namespace PreviousEdit
             var button = (ToolStripSplitButton)backwardMenuItems[1];
             button.DropDownItems.Clear();
             button.DropDownItems.AddRange(behavior.GetProvider());
-            button.TextImageRelation = TextImageRelation.TextBeforeImage;
-            button.Overflow = ToolStripItemOverflow.Never;
-            button.DropDown.AutoClose = false;
-            button.DropDown.Show();
         }
 
         void AddEventHandlers()
@@ -164,7 +158,7 @@ namespace PreviousEdit
             sciPrevPosition = sci.CurrentPos;
         }
 
-        void SciControlUpdateUI(ScintillaControl sci)
+        void SciControlUpdateUI([NotNull] ScintillaControl sci)
         {
             if (executableStatus != null && executableStatus.Equals(behavior.CurrentItem)) return;
             behavior.Add(sci.FileName, sci.CurrentPos, sci.CurrentLine);
@@ -173,14 +167,9 @@ namespace PreviousEdit
 
         void OnBackwardClick(object sender, EventArgs e)
         {
-            if (((ToolStripSplitButton) sender).ButtonPressed) NavigateBackward(sender, e);
+            if (((ToolStripSplitButton) sender).ButtonPressed && behavior.CanBackward) behavior.Backward();
         }
-
-        void NavigateBackward(object sender, EventArgs e)
-        {
-            if (behavior.CanBackward) behavior.Backward();
-        }
-
+        
         void NavigateForward(object sender, EventArgs e)
         {
             if (behavior.CanForward) behavior.Forward();

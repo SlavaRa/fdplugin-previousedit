@@ -36,5 +36,9 @@ namespace PreviousEdit.Behavior
         {
             queue.Change(fileName, startPosition, charsAdded, linesAdded);
         }
+
+#if DEBUG
+        public override string ToString() => queue.ToString();
+#endif
     }
 }

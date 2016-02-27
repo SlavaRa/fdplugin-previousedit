@@ -85,6 +85,10 @@ namespace PreviousEdit
             if (backward.Contains(CurrentItem)) backward.Remove(CurrentItem);
             else Backward();
         }
+
+#if DEBUG
+        public override string ToString() => backward.Aggregate("", (current, it) => current + $"Fatal:file:{it.FileName}->{it.Line}:{it.Position}\n");
+#endif
     }
 
     public class QueueItem

@@ -2,29 +2,24 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Windows.Forms;
+using JetBrains.Annotations;
 using PluginCore;
 using PluginCore.Helpers;
 using PluginCore.Managers;
 using PluginCore.Utilities;
+using PreviousEdit.Behavior;
 using ProjectManager;
 using ScintillaNet;
+using ScintillaNet.Enums;
 
 namespace PreviousEdit
 {
     public class PluginMain : IPlugin
     {
-        readonly List<InfoStatus> backward = new List<InfoStatus>();
-        readonly List<InfoStatus> forward = new List<InfoStatus>();
-        InfoStatus currentStatus;
-        InfoStatus executableStatus;
-        string settingFilename;
-        Settings settingObject;
-        List<ToolStripItem> forwardMenuItems;
-        List<ToolStripItem> backwardMenuItems;
-
         public int Api => 1;
+
+        [NotNull]
         public string Name => nameof(PreviousEdit);
         public string Guid => "55E1998E-9929-4470-805E-2DB339C29116";
         public string Help => "http://www.flashdevelop.org/community/";
@@ -33,16 +28,28 @@ namespace PreviousEdit
 
         [Browsable(false)]
         public object Settings => settingObject;
+        string settingFilename;
+        Settings settingObject;
+        readonly VSBehavior behavior = new VSBehavior();
+        QueueItem executableStatus;
+        List<ToolStripItem> forwardMenuItems;
+        List<ToolStripItem> backwardMenuItems;
+        int sciPrevPosition = -1;
 
+        /// <summary>
+        /// Initializes the plugin
+        /// </summary>
         public void Initialize()
         {
             InitBasics();
             LoadSettings();
-            backward.Capacity = ((Settings)Settings).MaxBackward;
-            InitMenuItems();
+            CreateMenuItems();
             AddEventHandlers();
         }
 
+        /// <summary>
+        /// Disposes the plugin
+        /// </summary>
         public void Dispose() => SaveSettings();
 
         /// <summary>
@@ -65,7 +72,10 @@ namespace PreviousEdit
             else settingObject = (Settings)ObjectSerializer.Deserialize(settingFilename, settingObject);
         }
 
-        void InitMenuItems()
+        /// <summary>
+        /// Creates the required menu items
+        /// </summary>
+        void CreateMenuItems()
         {
             var menu = (ToolStripMenuItem) PluginBase.MainForm.FindMenuItem("SearchMenu");
             menu.DropDownItems.Add(new ToolStripSeparator());
@@ -85,20 +95,27 @@ namespace PreviousEdit
             return new List<ToolStripItem> {menuItem, toolbarItem};
         }
 
+        /// <summary>
+        /// Updates the state of the menu items
+        /// </summary>
         void UpdateMenuItems()
         {
-            backwardMenuItems.ForEach(it => it.Enabled = backward.Count > 0);
-            forwardMenuItems.ForEach(it => it.Enabled = forward.Count > 0);
+            backwardMenuItems.ForEach(it => it.Enabled = behavior.CanBackward);
+            forwardMenuItems.ForEach(it => it.Enabled = behavior.CanForward);
         }
 
         void AddEventHandlers() => EventManager.AddEventHandler(this, EventType.FileSwitch | EventType.Command);
 
+        /// <summary>
+        /// Handles the incoming events
+        /// </summary>
         public void HandleEvent(object sender, NotifyEvent e, HandlingPriority priority)
         {
             if (e.Type == EventType.Command && ((DataEvent) e).Action == ProjectManagerEvents.Project)
             {
-                backward.Clear();
-                forward.Clear();
+                behavior.Clear();
+                sciPrevPosition = -1;
+                executableStatus = null;
                 UpdateMenuItems();
                 return;
             }
@@ -106,9 +123,11 @@ namespace PreviousEdit
             var doc = PluginBase.MainForm.CurrentDocument;
             if (!doc.IsEditable) return;
             var sci = doc.SciControl;
-            sci.UpdateUI += SciControlModified;
+            sci.Modified -= SciControlModified;
             sci.Modified += SciControlModified;
-            SciControlModified(sci);
+            sci.UpdateUI -= SciControlUpdateUI;
+            sci.UpdateUI += SciControlUpdateUI;
+            SciControlUpdateUI(sci);
         }
 
         /// <summary>
@@ -122,90 +141,46 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
-            SciControlModified(sci);
+            if (linesAdded < 0)
+            {
+                if (sciPrevPosition != -1)
+                {
+                    var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
+                    behavior.RemoveLines(sci.FileName, startPosition, length, Math.Abs(linesAdded));
+                }
+            }
+            sciPrevPosition = sci.CurrentPos;
         }
 
-        void SciControlModified(ScintillaControl sci)
+        void SciControlUpdateUI(ScintillaControl sci)
         {
-            var line = sci.CurrentLine;
-            var status = new InfoStatus(sci.FileName, sci.CurrentPos, line);
-            if (currentStatus == null)
-            {
-                currentStatus = status;
-                return;
-            }
-            if (executableStatus != null)
-            {
-                executableStatus = null;
-                return;
-            }
-            if (currentStatus.Equals(status)) return;
-            var count = backward.Count;
-            if (count > 0 && backward.Last().CurrentLine == line && currentStatus.CurrentLine == line)
-            {
-                currentStatus = status;
-                return;
-            }
-            if (count == backward.Capacity - 1) backward.RemoveAt(0);
-            backward.Add(currentStatus);
-            forward.Clear();
-            currentStatus = status;
+            if (executableStatus != null && executableStatus.Equals(behavior.CurrentItem)) return;
+            behavior.Add(sci.FileName, sci.CurrentPos, sci.CurrentLine);
             UpdateMenuItems();
         }
 
         void NavigateBackward(object sender, EventArgs e)
         {
-            var count = backward.Count;
-            if (count == 0) return;
-            var item = backward.Last();
-            backward.Remove(item);
-            forward.Add(currentStatus);
-            Navigate(item);
+            if (!behavior.CanBackward) return;
+            behavior.Backward();
+            Navigate(behavior.CurrentItem);
         }
 
         void NavigateForward(object sender, EventArgs e)
         {
-            var count = forward.Count;
-            if (count == 0) return;
-            var item = forward.Last();
-            forward.Remove(item);
-            backward.Add(currentStatus);
-            Navigate(item);
+            if (!behavior.CanForward) return;
+            behavior.Forward();
+            Navigate(behavior.CurrentItem);
         }
 
-        void Navigate(InfoStatus to)
+        void Navigate(QueueItem to)
         {
-            UpdateMenuItems();
             executableStatus = to;
-            currentStatus = null;
+            UpdateMenuItems();
             PluginBase.MainForm.OpenEditableDocument(to.FileName, false);
             var position = to.Position;
             PluginBase.MainForm.CurrentDocument.SciControl.SetSel(position, position);
-        }
-    }
-
-    class InfoStatus
-    {
-        public string FileName;
-        public int Position;
-        public int CurrentLine;
-
-        public InfoStatus(string fileName, int position, int currentLine)
-        {
-            FileName = fileName;
-            Position = position;
-            CurrentLine = currentLine;
-        }
-
-        public override bool Equals(object obj)
-        {
-            var status = (InfoStatus) obj;
-            return status.FileName == FileName && status.Position == Position;
-        }
-
-        public override int GetHashCode()
-        {
-            return FileName.GetHashCode() + Position.GetHashCode();
+            executableStatus = null;
         }
     }
 }

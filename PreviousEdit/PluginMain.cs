@@ -141,15 +141,10 @@ namespace PreviousEdit
         void SciControlModified(ScintillaControl sci, int position, int modificationType,
             string text, int length, int linesAdded, int line, int intfoldLevelNow, int foldLevelPrev)
         {
-            if (linesAdded < 0)
-            {
-                if (sciPrevPosition != -1)
-                {
-                    var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
-                    behavior.RemoveLines(sci.FileName, startPosition, length, Math.Abs(linesAdded));
-                }
-            }
-            sciPrevPosition = sci.CurrentPos;
+            //var startPosition = sciPrevPosition < position ? sciPrevPosition : position;
+            //if (linesAdded < 0) length = -length;
+            //behavior.Change(sci.FileName, startPosition, length, linesAdded);
+            //sciPrevPosition = sci.CurrentPos;
         }
 
         void SciControlUpdateUI(ScintillaControl sci)

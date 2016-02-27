@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using JetBrains.Annotations;
@@ -58,45 +59,54 @@ namespace PreviousEdit
 
         public void Change([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
         {
-            if (fileName == CurrentItem.FileName && startPosition <= CurrentItem.Position)
+            forward.Clear();
+            if (fileName == CurrentItem.FileName) backward.Add(CurrentItem);
+            var endPosition = startPosition + Math.Abs(charsAdded);
+            if (linesAdded < 0)
             {
-                CurrentItem.Position += charsAdded;
-                CurrentItem.Line += linesAdded;
+                foreach (var it in backward.ToList())
+                {
+                    var itemPosition = it.Position;
+                    if (it.FileName == fileName && itemPosition >= startPosition && itemPosition < endPosition)
+                    {
+                        it.Clear();
+                        backward.Remove(it);
+                    }
+                }
             }
             foreach (var it in backward)
             {
-                if (it.FileName != fileName || it.Position < startPosition) continue;
-                it.Position += charsAdded;
-                it.Line += linesAdded;
-            }
-        }
-
-        public void RemoveLines([NotNull] string fileName, int startPosition, int length, int linesRemoved)
-        {
-            var list = new List<QueueItem>(backward);
-            list.Add(CurrentItem);
-            var endPosition = startPosition + length;
-            foreach (var it in list)
-            {
-                if (it.FileName != fileName || it.Position < startPosition) continue;
-                if (it.Position < endPosition)
+                if (it.FileName == fileName && it.Position >= startPosition)
                 {
-                    if(backward.Contains(it)) backward.Remove(it);
-                }
-                else
-                {
-                    it.Position -= length;
-                    it.Line -= linesRemoved;
+                    it.Position += charsAdded;
+                    it.Line += linesAdded;
                 }
             }
+            if (backward.Contains(CurrentItem)) backward.Remove(CurrentItem);
+            else Backward();
         }
     }
 
     public class QueueItem
     {
         public string FileName { get; set; }
-        public int Position { get; set; }
-        public int Line { get; set; }
+
+        int position;
+
+        public int Position
+        {
+            get { return position; }
+            set { position = Math.Max(0, value); }
+        }
+
+        int line;
+
+        public int Line
+        {
+            get { return line; }
+            set { line = Math.Max(0, value); }
+        }
+
         public bool IsEmpty => string.IsNullOrEmpty(FileName) && Position == 0 && Line == 0;
 
         public bool Equals([NotNull] QueueItem to) => Equals(to.FileName, to.Position, to.Line);

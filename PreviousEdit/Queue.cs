@@ -124,23 +124,15 @@ namespace PreviousEdit
 
         void OnBackwardMenuClick(object sender, EventArgs args)
         {
-            try
-            {
-                var button = (ToolStripButton)sender;
-                var item = (QueueItem)button.Tag;
-                var index = backward.IndexOf(item);
-                var count = backward.Count - 1 - index;
-                List<QueueItem> items = backward.GetRange(index, count);
-                backward.RemoveRange(index, count);
-                forward.AddRange(items);
-                CurrentItem.Clear();
-                Backward();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                ErrorManager.ShowError(e);
-            }
+            var button = (ToolStripButton)sender;
+            var item = (QueueItem)button.Tag;
+            var index = backward.IndexOf(item);
+            var count = backward.Count - 1 - index;
+            List<QueueItem> items = backward.GetRange(index, count);
+            backward.RemoveRange(index, count);
+            forward.AddRange(items);
+            CurrentItem.Clear();
+            Backward();
         }
     }
 

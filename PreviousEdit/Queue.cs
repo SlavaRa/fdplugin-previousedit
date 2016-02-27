@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using JetBrains.Annotations;
-using PluginCore.Managers;
 
 namespace PreviousEdit
 {
@@ -125,13 +124,10 @@ namespace PreviousEdit
         void OnBackwardMenuClick(object sender, EventArgs args)
         {
             var item = (QueueItem) ((ToolStripMenuItem) sender).Tag;
-            TraceManager.Add("1:" + backward.Contains(item));
             var index = backward.IndexOf(item) + 1;
             var count = backward.Count - index;
             var items = backward.GetRange(index, count);
             backward.RemoveRange(index, count);
-            TraceManager.Add("2:" + backward.Contains(item));
-            TraceManager.Add("3:" + backward.Last().Equals(item));
             forward.AddRange(items);
             CurrentItem.Clear();
             Backward();

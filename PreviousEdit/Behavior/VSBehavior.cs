@@ -36,10 +36,5 @@ namespace PreviousEdit.Behavior
         {
             queue.Change(fileName, startPosition, charsAdded, linesAdded);
         }
-
-        public void RemoveLines([NotNull] string fileName, int position, int length, int linesRemoved)
-        {
-            queue.RemoveLines(fileName, position, length, linesRemoved);
-        }
     }
 }

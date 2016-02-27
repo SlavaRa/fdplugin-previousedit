@@ -191,52 +191,81 @@ namespace PreviousEdit.Tests
         public void Change()
         {
             var queue = new Queue();
-            queue.Add("filename0", 0, 1);
+            const string filename0 = "filename0";
+            queue.Add(filename0, position: 0, line: 1);
             queue.Add("filename1", 1, 1);
-            queue.Add("filename0", 100, 2);
+            queue.Add(filename0, position: 100, line: 2);
             queue.Add("filename3", 1, 1);
-            queue.Add("filename0", 1000, 3);
-            queue.Change("filename0", 150, 1, 1);
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 1001, 4));
-            queue.Change("filename0", 0, 10, 1);
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 1011, 5));
+            queue.Add(filename0, position: 1000, line: 3);
+            queue.Change(filename0, startPosition: 150, charsAdded: 1, linesAdded: 1);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename0, position: 1001, line: 4));
+            queue.Change(filename0, 0, 10, 1);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename0, position: 1011, line: 5));
             queue.Backward();
+            queue.Backward();//skip filename3
+            Assert.IsTrue(queue.CurrentItem.Equals(filename0, position: 110, line: 3));
             queue.Backward();
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 110, 3));
-            queue.Backward();
-            queue.Backward();
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 10, 2));
+            queue.Backward();//skip filename1
+            Assert.IsTrue(queue.CurrentItem.Equals(filename0, position: 10, line: 2));
         }
 
         [TestMethod]
         public void Change_0()
         {
+            const string fileName = "filename0";
             var queue = new Queue();
-            queue.Add("filename0", 0, 1);
-            queue.Add("filename0", 100, 2);
-            queue.Add("filename0", 1000, 3);
-            queue.Change("filename0", 0, -1, -1);
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 999, 2));
+            queue.Add(fileName, position: 0, line: 1);
+            queue.Add(fileName, position: 100, line: 2);
+            queue.Add(fileName, position: 1000, line: 3);
+            queue.Change(fileName, startPosition: 101, charsAdded: -999, linesAdded: -1);
+            Assert.IsTrue(queue.CurrentItem.Equals(fileName, position: 100, line: 2));
             queue.Backward();
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 99, 1));
-            queue.Backward();
-            Assert.IsTrue(queue.CurrentItem.Equals("filename0", 0, 0));
+            Assert.IsTrue(queue.CurrentItem.Equals(fileName, position: 0, line: 1));
         }
 
         [TestMethod]
-        public void RemoveLines()
+        public void Change_1()
         {
+            const string filename = "filename";
             var queue = new Queue();
-            queue.Add("filename0", 0, 1);
-            queue.Add("filename0", 10, 2);
-            queue.Add("filename0", 20, 3);
-            queue.Add("filename0", 30, 4);
-            queue.Add("filename0", 40, 5);
-            queue.RemoveLines("filename0", 20, 10, 1);
-            Assert.AreEqual(4, queue.CurrentItem.Line);
-            queue.RemoveLines("filename0", 0, 10, 1);
+            queue.Add(filename, position: 0, line: 1);
+            queue.Add(filename, position: 4, line: 2);
+            queue.Add(filename, position: 9, line: 3);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 9, line: 3));
+            queue.Change(filename, startPosition: 3, charsAdded: 100, linesAdded: 0);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 109, line: 3));
             queue.Backward();
-            Assert.AreEqual(2, queue.CurrentItem.Line);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 104, line: 2));
+        }
+
+        [TestMethod]
+        public void Change_2()
+        {
+            const string filename = "filename";
+            var queue = new Queue();
+            queue.Add(filename, position: 0, line: 1);
+            queue.Add(filename, position: 6, line: 2);
+            queue.Add(filename, position: 8, line: 3);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 8, line: 3));
+            queue.Change(filename, startPosition: 7, charsAdded: -1, linesAdded: 0);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 7, line: 3));
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 6, line: 2));
+        }
+
+        [TestMethod]
+        public void Change_3()
+        {
+            const string filename = "filename";
+            var queue = new Queue();
+            queue.Add(filename, position: 0, line: 1);
+            queue.Add(filename, position: 6, line: 2);
+            queue.Add(filename, position: 8, line: 3);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 8, line: 3));
+            queue.Change(filename, startPosition: 4, charsAdded: -4, linesAdded: -1);
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 4, line: 2));
+            queue.Backward();
+            Assert.IsTrue(queue.CurrentItem.Equals(filename, position: 0, line: 1));
         }
     }
 }

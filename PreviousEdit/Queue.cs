@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Windows.Forms;
 using JetBrains.Annotations;
 
 namespace PreviousEdit
@@ -68,29 +66,6 @@ namespace PreviousEdit
         [NotNull]
         public QueueItem GetBackwardItem() => CanBackward ? backward.Last() : new QueueItem();
 
-        [NotNull]
-        public ToolStripItem[] GetProvider()
-        {
-            var items = new List<QueueItem>(backward);
-            items.Add(CurrentItem);
-            var result = new List<ToolStripItem>();
-            for (var i = items.Count - 1; i >= 0; i--)
-            {
-                var it = items[i];
-                var text = $"{Path.GetFileName(it.FileName)}: Line:{it.Line} Position:{it.Position}";
-                var button = new ToolStripMenuItem
-                {
-                    Text = text,
-                    Width = 340,
-                    Tag = it,
-                };
-                if (button.Tag != CurrentItem) button.Click += OnBackwardMenuClick;
-                else button.ImageKey = "current";
-                result.Add(button);
-            }
-            return result.ToArray();
-        }
-
         public void Update([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
         {
             forward.Clear();
@@ -121,17 +96,11 @@ namespace PreviousEdit
             Change?.Invoke(this, EventArgs.Empty);
         }
 
-        void OnBackwardMenuClick(object sender, EventArgs args)
-        {
-            var item = (QueueItem) ((ToolStripMenuItem) sender).Tag;
-            var index = backward.IndexOf(item) + 1;
-            var count = backward.Count - index;
-            var items = backward.GetRange(index, count);
-            backward.RemoveRange(index, count);
-            forward.AddRange(items);
-            CurrentItem.Clear();
-            Backward();
-        }
+        [NotNull]
+        public List<QueueItem> GetBackward() => backward.ToList();
+
+        [NotNull]
+        public List<QueueItem> GetForward() => forward.ToList();
     }
 
     public class QueueItem

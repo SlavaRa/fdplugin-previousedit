@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Windows.Forms;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 
 namespace PreviousEdit.Behavior
@@ -27,14 +27,18 @@ namespace PreviousEdit.Behavior
 
         public void Add([NotNull] string fileName, int position, int line) => queue.Add(fileName, position, line);
 
-        [NotNull]
-        public QueueItem GetBackwardItem() => queue.GetBackwardItem();
-
         public void Update([NotNull] string fileName, int startPosition, int charsAdded, int linesAdded)
         {
             queue.Update(fileName, startPosition, charsAdded, linesAdded);
         }
 
-        public ToolStripItem[] GetProvider() => queue.GetProvider();
+        [NotNull]
+        public QueueItem GetBackwardItem() => queue.GetBackwardItem();
+
+        [NotNull]
+        public List<QueueItem> GetBackward() => queue.GetBackward();
+
+        [NotNull]
+        public List<QueueItem> GetForward() => queue.GetForward();
     }
 }

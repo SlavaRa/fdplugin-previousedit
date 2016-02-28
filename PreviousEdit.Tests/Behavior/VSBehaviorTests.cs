@@ -153,5 +153,32 @@ namespace PreviousEdit.Tests.Behavior
             behavior.Backward();
             Assert.IsTrue(behavior.CurrentItem.Equals("filename0", 10, 2));
         }
+
+        [TestMethod]
+        public void getBackward()
+        {
+            var behavior = new VSBehavior();
+            Assert.IsNotNull(behavior.GetBackward());
+            const string fileName = "fileName";
+            behavior.Add(fileName, position: 0, line: 0);
+            behavior.Add(fileName, position: 1, line: 1);
+            var backward = behavior.GetBackward();
+            Assert.AreEqual(1, backward.Count);
+            Assert.IsTrue(new QueueItem { FileName = fileName, Position = 0, Line = 0 }.Equals(backward[0]));
+        }
+
+        [TestMethod]
+        public void getForward()
+        {
+            var behavior = new VSBehavior();
+            Assert.IsNotNull(behavior.GetForward());
+            const string fileName = "fileName";
+            behavior.Add(fileName, position: 0, line: 0);
+            behavior.Add(fileName, position: 1, line: 1);
+            behavior.Backward();
+            var forward = behavior.GetForward();
+            Assert.AreEqual(1, forward.Count);
+            Assert.IsTrue(new QueueItem { FileName = fileName, Position = 1, Line = 1 }.Equals(forward[0]));
+        }
     }
 }

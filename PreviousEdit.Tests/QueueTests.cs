@@ -183,6 +183,33 @@ namespace PreviousEdit.Tests
         }
 
         [TestMethod]
+        public void getBackward()
+        {
+            var queue = new Queue();
+            Assert.IsNotNull(queue.GetBackward());
+            const string fileName = "fileName";
+            queue.Add(fileName, position: 0, line: 0);
+            queue.Add(fileName, position: 1, line: 1);
+            var backward = queue.GetBackward();
+            Assert.AreEqual(1, backward.Count);
+            Assert.IsTrue(new QueueItem {FileName = fileName, Position = 0, Line = 0}.Equals(backward[0]));
+        }
+
+        [TestMethod]
+        public void getForward()
+        {
+            var queue = new Queue();
+            Assert.IsNotNull(queue.GetForward());
+            const string fileName = "fileName";
+            queue.Add(fileName, position: 0, line: 0);
+            queue.Add(fileName, position: 1, line: 1);
+            queue.Backward();
+            var forward = queue.GetForward();
+            Assert.AreEqual(1, forward.Count);
+            Assert.IsTrue(new QueueItem {FileName = fileName, Position = 1, Line = 1}.Equals(forward[0]));
+        }
+
+        [TestMethod]
         public void GetBackwardItem()
         {
             var queue = new Queue();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using JetBrains.Annotations;
 using PluginCore;
@@ -94,10 +95,13 @@ namespace PreviousEdit
             ToolStripItem toolbarItem;
             if (toolbarIndex == 0)
             {
-                toolbarItem = new ToolStripSplitButton(string.Empty, image, onClick) { ToolTipText = text};
+                toolbarItem = new ToolStripSplitButton(string.Empty, image, onClick) {ToolTipText = text};
                 var imageList = new ImageList();
+                imageList.Images.Add("empty", PluginBase.MainForm.FindImage("-1"));
                 imageList.Images.Add("current", PluginBase.MainForm.FindImage("461"));
-                ((ToolStripSplitButton) toolbarItem).DropDown.ImageList = imageList;
+                var button = (ToolStripSplitButton) toolbarItem;
+                button.DropDown.ImageList = imageList;
+                button.DropDown.MaximumSize = new Size(340, 600);
             }
             else toolbarItem = new ToolStripButton(string.Empty, image, onClick) {ToolTipText = text};
             PluginBase.MainForm.ToolStrip.Items.Insert(toolbarIndex, toolbarItem);
@@ -112,11 +116,24 @@ namespace PreviousEdit
             backwardMenuItems.ForEach(it => it.Enabled = behavior.CanBackward);
             forwardMenuItems.ForEach(it => it.Enabled = behavior.CanForward);
             var button = (ToolStripSplitButton)backwardMenuItems[1];
-            button.DropDown.MaximumSize = new Size(340, 600);
             button.DropDownItems.Clear();
-            button.DropDownItems.AddRange(behavior.GetProvider());
+            var backward = behavior.GetBackward();
+            for (var i = backward.Count - 1; i >= 0; i--)
+            {
+                var it = backward[i];
+                button.DropDownItems.Add($"{Path.GetFileName(it.FileName)}: Line {it.Line}: Position {it.Position}");
+            }
+            var item = behavior.CurrentItem;
+            button.DropDownItems.Add($"{Path.GetFileName(item.FileName)}: Line {item.Line}: Position {item.Position}");
+            var forward = behavior.GetForward();
+            foreach (var it in forward)
+            {
+                button.DropDownItems.Add($"{Path.GetFileName(it.FileName)}: Line {it.Line}: Position {it.Position}");
+            }
+#if DEBUG
             button.DropDown.AutoClose = false;
             button.DropDown.Show();
+#endif
         }
 
         void AddEventHandlers()
@@ -167,14 +184,16 @@ namespace PreviousEdit
             behavior.Update(sci.FileName, startPosition, length, linesAdded);
             sciPrevPosition = sci.CurrentPos;
         }
-
+        
         void SciControlUpdateUI([NotNull] ScintillaControl sci)
         {
-            if (sci.CurrentPos == sciPrevPosition) return;
+            var currentPos = sci.CurrentPos;
+            if (currentPos == sciPrevPosition) return;
             if (executableStatus != null && executableStatus.Equals(behavior.CurrentItem)) return;
-            behavior.Add(sci.FileName, sci.CurrentPos, sci.CurrentLine);
+            if (string.IsNullOrEmpty(sci.FileName)) return;
+            behavior.Add(sci.FileName, currentPos, sci.CurrentLine);
             UpdateMenuItems();
-            sciPrevPosition = sci.CurrentPos;
+            sciPrevPosition = currentPos;
         }
 
         void OnBackwardClick(object sender, EventArgs e)

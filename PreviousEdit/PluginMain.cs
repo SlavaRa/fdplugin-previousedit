@@ -11,7 +11,6 @@ using PluginCore.Utilities;
 using PreviousEdit.Behavior;
 using ProjectManager;
 using ScintillaNet;
-using ScintillaNet.Enums;
 
 namespace PreviousEdit
 {
@@ -30,7 +29,10 @@ namespace PreviousEdit
         public object Settings => settingObject;
         string settingFilename;
         Settings settingObject;
+
+        [NotNull]
         readonly VSBehavior behavior = new VSBehavior();
+
         QueueItem executableStatus;
         List<ToolStripItem> forwardMenuItems;
         List<ToolStripItem> backwardMenuItems;
@@ -79,12 +81,12 @@ namespace PreviousEdit
         {
             var menu = (ToolStripMenuItem) PluginBase.MainForm.FindMenuItem("SearchMenu");
             menu.DropDownItems.Add(new ToolStripSeparator());
-            backwardMenuItems = createMenuItem(menu, "1", "Navigate Backward", NavigateBackward, $"{Name}.NavigateBackward", 0);
-            forwardMenuItems = createMenuItem(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
+            backwardMenuItems = CreateMenuItem(menu, "1", "Navigate Backward", NavigateBackward, $"{Name}.NavigateBackward", 0);
+            forwardMenuItems = CreateMenuItem(menu, "9", "Navigate Forward", NavigateForward, $"{Name}.NavigateForward", 1);
             PluginBase.MainForm.ToolStrip.Items.Insert(2, new ToolStripSeparator());
         }
 
-        static List<ToolStripItem> createMenuItem(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
+        static List<ToolStripItem> CreateMenuItem(ToolStripDropDownItem menu, string imageIndex, string text, EventHandler onClick, string shortcutId, int toolbarIndex)
         {
             var image = PluginBase.MainForm.FindImage(imageIndex);
             var menuItem = new ToolStripMenuItem(text, image, onClick);

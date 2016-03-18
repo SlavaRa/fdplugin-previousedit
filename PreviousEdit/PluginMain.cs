@@ -131,8 +131,8 @@ namespace PreviousEdit
                 button.DropDownItems.Add($"{Path.GetFileName(it.FileName)}: Line {it.Line}: Position {it.Position}");
             }
 #if DEBUG
-            button.DropDown.AutoClose = false;
-            button.DropDown.Show();
+//            button.DropDown.AutoClose = false;
+//            button.DropDown.Show();
 #endif
         }
 
